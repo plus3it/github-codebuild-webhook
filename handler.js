@@ -67,6 +67,22 @@ module.exports.start_build = (event, context, callback) => {
         sourceVersion: 'pr/' + event.pull_request.number
       };
 
+      var status = {
+        owner: repo.owner.login,
+        repo: repo.name,
+        sha: head.sha,
+        state: 'pending',
+        context: githubContext,
+        description: 'Setting up the build...'
+      };
+
+      // check that we can set a status before starting the build
+      github.repos.createStatus(status).catch(function(err) {
+        console.log("Github authentication failed");
+        console.log(err, err.stack);
+        callback(err);
+      });
+
       // start the codebuild process for this project
       codebuild.startBuild(params, function(err, data) {
         if (err) {
@@ -77,15 +93,9 @@ module.exports.start_build = (event, context, callback) => {
           response.build = data.build;
 
           // all is well, mark the commit as being 'in progress'
-          github.repos.createStatus({
-            owner: repo.owner.login,
-            repo: repo.name,
-            sha: head.sha,
-            state: 'pending',
-            target_url: 'https://' + region + '.console.aws.amazon.com/codebuild/home?region=' + region + '#/builds/' + data.build.id + '/view/new',
-            context: githubContext,
-            description: 'Build is running...'
-          }).then(function(data){
+          status.description = 'Build is running...'
+          status.target_url = 'https://' + region + '.console.aws.amazon.com/codebuild/home?region=' + region + '#/builds/' + data.build.id + '/view/new'
+          github.repos.createStatus(status).then(function(data){
             console.log(data);
           });
           callback(null, response);
