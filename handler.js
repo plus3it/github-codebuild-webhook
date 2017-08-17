@@ -6,10 +6,13 @@ var ssm = new AWS.SSM();
 
 var GitHubApi = require("github");
 var github = new GitHubApi();
-var BUILD_ACTIONS = [
+var PULL_ACTIONS = [
     "opened",
     "reopened",
     "synchronize"
+];
+var COMMENT_ACTIONS = [
+    "created"
 ];
 
 var ssmParams = {
@@ -29,6 +32,17 @@ var region = process.env.AWS_DEFAULT_REGION;
 // get the github status context
 var githubContext = process.env.GITHUB_STATUS_CONTEXT;
 
+// get the desired buildable events, 'pr_state,pr_comment'
+var buildEvents = getObjectDefault(process.env, "GITHUB_BUILD_EVENTS", "pr_state").split(",");
+
+// get the authorized build users
+var buildUsers = getObjectDefault(process.env, "GITHUB_BUILD_USERS", "");
+buildUsers = buildUsers != "" ? buildUsers.split(",") : [];
+
+// get the build comment
+var buildComment = getObjectDefault(process.env, "GITHUB_BUILD_COMMENT", "");
+buildComment = buildComment != "" ? buildComment : "go codebuild go";
+
 // this function will be triggered by the github webhook
 module.exports.start_build = (event, context, callback) => {
 
@@ -37,19 +51,31 @@ module.exports.start_build = (event, context, callback) => {
     build: {}
   };
 
-  // we only act on pull_request changes (can be any, but we don't need those)
-  if('pull_request' in event) {
+  var buildOptions = {
+    event: event,
+    buildEvents: buildEvents,
+    buildUsers: buildUsers,
+    buildComment: buildComment,
+    pullActions: PULL_ACTIONS,
+    commentActions: COMMENT_ACTIONS
+  };
 
-    if(BUILD_ACTIONS.indexOf(event.action) >= 0) {
-
-      response.pull_request = event.pull_request
-      var head = event.pull_request.head;
-      var base = event.pull_request.base;
+  getPullRequest(buildOptions, function (err, pullRequest) {
+    if (err) {
+      console.log(err);
+      callback(err);
+    } else if (pullRequest.state != "open") {
+      callback("Pull request is not open");
+    } else {
+      console.log("Cleared tests, this is a buildable event:", event)
+      response.pull_request = pullRequest;
+      var head = pullRequest.head;
+      var base = pullRequest.base;
       var repo = base.repo;
 
       var params = {
         projectName: process.env.BUILD_PROJECT,
-        sourceVersion: 'pr/' + event.pull_request.number
+        sourceVersion: 'pr/' + pullRequest.number
       };
 
       var status = {
@@ -67,7 +93,8 @@ module.exports.start_build = (event, context, callback) => {
           callback(err);
         } else {
           // check that we can set a status before starting the build
-          github.repos.createStatus(status).then(function() {
+          github.repos.createStatus(status).then(function(data) {
+            console.log("Set setup status:", data)
             // start the codebuild  project
             codebuild.startBuild(params, function(err, data) {
               if (err) {
@@ -76,12 +103,14 @@ module.exports.start_build = (event, context, callback) => {
               } else {
                 // store the build data in the response
                 response.build = data.build;
+                console.log("Started CodeBuild job:", data)
 
                 // all is well, mark the commit as being 'in progress'
                 status.description = 'Build is running...'
                 status.target_url = 'https://' + region + '.console.aws.amazon.com/codebuild/home?region=' + region + '#/builds/' + data.build.id + '/view/new'
                 github.repos.createStatus(status).then(function(data){
                   // success
+                  console.log("Set running status:", data)
                   callback(null, response);
                 }).catch(function(err) {
                   console.log(err);
@@ -96,12 +125,8 @@ module.exports.start_build = (event, context, callback) => {
           });
         }
       });
-    } else {
-      callback("Event is not a build action")
     }
-  } else {
-    callback("Not a PR");
-  }
+  });
 }
 
 module.exports.check_build_status = (event, context, callback) => {
@@ -200,4 +225,83 @@ function setGithubAuth(github, ssm, params, callback) {
       }
     });
   }
+}
+
+/*
+    getPullRequest() tests the build event and returns pr data if the event is
+    buildable.
+
+    options = {
+      event: {},
+      buildEvents: [],
+      buildUsers: [],
+      buildComment: "",
+      pullActions: [],
+      commentActions: [],
+    }
+*/
+function getPullRequest(options, callback) {
+    if (isPullEvent(options)) {
+      callback(null, options.event.pull_request);
+    } else if (isIssueCommentEvent(options)) {
+      getPullFromComment(options.event.issue, function (err, data) {
+        if (err) callback(err);
+        else callback(null, data);
+      });
+    } else callback("Event is not buildable");
+}
+
+function isPullEvent(options) {
+    var isBuildable = (
+        'pull_request' in options.event &&
+        options.pullActions.indexOf(options.event.action) >= 0 &&
+        options.buildEvents.indexOf('pr_state') >= 0
+    );
+    console.log("Test for buildable pull_request event:", isBuildable);
+    return isBuildable;
+}
+
+function isIssueCommentEvent(options) {
+    var isBuildable = (
+        'comment' in options.event &&
+        'issue' in options.event &&
+        'pull_request' in options.event.issue &&
+        options.commentActions.indexOf(options.event.action) >= 0 &&
+        options.buildEvents.indexOf('pr_comment') >= 0 &&
+        options.buildComment.toLowerCase() === options.event.comment.body.toLowerCase()
+    );
+    if (options.buildUsers.length > 0) {
+        isBuildable = isBuildable && options.buildUsers.indexOf(options.event.comment.user.login) >= 0
+    }
+    console.log("Test for buildable issue_comment event:", isBuildable);
+    return isBuildable;
+}
+
+function getPullFromComment(issue, callback) {
+    setGithubAuth(github, ssm, ssmParams, function (err) {
+    if (err) {
+      console.log(err);
+      callback(err);
+    } else {
+      // https://api.github.com/repos/owner/repo/issues/number
+      var pullRequestUrl = issue.url.split("/");
+      var owner = pullRequestUrl[4];
+      var repo = pullRequestUrl[5];
+      var number = pullRequestUrl[7];
+      github.pullRequests.get({
+        owner: owner,
+        repo: repo,
+        number: number
+      }).then(function(data) {
+        callback(null, data.data);
+      }).catch(function(err) {
+        callback(err);
+      });
+    }
+   });
+}
+
+function getObjectDefault(obj, key, defaultValue) {
+    var value = obj[key];
+    return value != undefined ? value : defaultValue;
 }
