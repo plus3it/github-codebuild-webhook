@@ -23,16 +23,30 @@ To deploy this service with Serverless:
 
 1.  Clone this repository
 2.  `npm install` dependencies
-3.  Run `serverless deploy`
+3.  Export required environment variables
 
 ```shell
-export SSM_GITHUB_USERNAME="/path/to/github-username"         # Path in SSM
-export SSM_GITHUB_ACCESS_TOKEN="/path/to/github-access-token" # Path in SSM
-export GITHUB_REPOSITORY=https://github.com/owner/repository
-export BUILD_PROJECT=your_codebuild_application_name
+export BUILD_PROJECT="your_codebuild_application_name"
+export GITHUB_REPOSITORY="https://github.com/owner/repository"
+export SSM_GITHUB_USERNAME="/path/to/github-username"          # Path in SSM
+export SSM_GITHUB_ACCESS_TOKEN="/path/to/github-access-token"  # Path in SSM
+```
 
+4.  Export optional environment variables
+
+```shell
+export GITHUB_STATUS_CONTEXT="codebuild/pr"  # Tag associated with the status check in GitHub
+export GITHUB_BUILD_EVENTS="pr_state"  # Comma-separated string of build events, supports "pr_state" and "pr_comment"
+export GITHUB_BUILD_USERS=""  # Comma-separated string of GitHub users authorized to build from PR comments
+export GITHUB_BUILD_COMMENT="go codebuild go"  # Case-insensitive string that will start a build from a PR comment
+```
+
+5.  Run `serverless deploy`
+
+```
 serverless deploy -v
 ```
+
 
 # Architecture
 
@@ -60,5 +74,3 @@ link of the PR status, it will take you to the CodeBuild build log.
 *   Perhaps make build project dynamic through apigateway variable if possible.
 *   Doublecheck `editHook` functionality.
 *   Add `deleteHook` functionality.
-*   Support option to run the build only when an authorized user requests the
-    build via a comment on the PR.

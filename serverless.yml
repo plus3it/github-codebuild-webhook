@@ -7,7 +7,12 @@ plugins:
   - serverless-pseudo-parameters
 
 custom:
-  githubStatusContext: codebuild-ci/pr
+  stage: dev
+  github-webhook:
+    githubStatusContext: codebuild/${env:BUILD_PROJECT}/pr
+    githubBuildEvents: pr_state
+    githubBuildUsers: ""
+    githubBuildComment: go codebuild go
   parameters:
     CodebuildProject:
       Type: String
@@ -19,8 +24,20 @@ custom:
       Description: "Github repository url, eg: https://github.com/[username]/[repository]"
     GithubStatusContext:
       Type: String
-      Default: ${env:GITHUB_STATUS_CONTEXT, self:custom.githubStatusContext}
+      Default: ${env:GITHUB_STATUS_CONTEXT, self:custom.github-webhook.githubStatusContext}
       Description: A label used to differentiate this status from other status integrations
+    GithubBuildEvents:
+      Type: String
+      Default: ${env:GITHUB_BUILD_EVENTS, self:custom.github-webhook.githubBuildEvents}
+      Description: Comma-separated string of Github events that should initiate a build, supports "pr_state" or "pr_comment"
+    GithubBuildUsers:
+      Type: String
+      Default: ${env:GITHUB_BUILD_USERS, self:custom.github-webhook.githubBuildUsers}
+      Description: For pull request comments, a comma-separated string of users authorized to initiate a build
+    GithubBuildComment:
+      Type: String
+      Default: ${env:GITHUB_BUILD_COMMENT, self:custom.github-webhook.githubBuildComment}
+      Description: For pull request comments, the comment that will initiate a build
     SsmGithubUsername:
       Type: String
       Default: ${env:SSM_GITHUB_USERNAME}
@@ -33,7 +50,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs6.10
-  stage: trigger
+  stage: ${opt:stage, self:custom.stage}
   versionFunctions: false
   memorySize: 128
 
@@ -63,6 +80,12 @@ provider:
       Ref: GithubRepository
     GITHUB_STATUS_CONTEXT:
       Ref: GithubStatusContext
+    GITHUB_BUILD_EVENTS:
+      Ref: GithubBuildEvents
+    GITHUB_BUILD_USERS:
+      Ref: GithubBuildUsers
+    GITHUB_BUILD_COMMENT:
+      Ref: GithubBuildComment
     SSM_GITHUB_USERNAME:
       Ref: SsmGithubUsername
     SSM_GITHUB_ACCESS_TOKEN:

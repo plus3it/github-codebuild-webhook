@@ -36,7 +36,7 @@ module.exports.resource = (event, context, callback) => {
       owner: repo[3],
       repo: repo[4],
       name: 'web',
-      events: ['pull_request'],
+      events: ['pull_request', 'issue_comment'],
       active: true,
       config: {
         url: event.ResourceProperties.Endpoint,
