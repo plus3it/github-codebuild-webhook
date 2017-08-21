@@ -18,6 +18,12 @@ build status. This will be triggered for any PR update, on any branch.
     aws ssm put-parameter --name /path/to/github-access-token --value <GITHUB_ACCESS_TOKEN> --type SecureString
     ```
 
+4.  Get the KMS key ID used to encrypt the SSM parameters. For example:
+
+    ```shell
+    aws kms describe-key --key-id alias/aws/ssm
+    ```
+
 # Deploying with Serverless
 To deploy this service with Serverless:
 
@@ -30,6 +36,7 @@ export BUILD_PROJECT="your_codebuild_application_name"
 export GITHUB_REPOSITORY="https://github.com/owner/repository"
 export SSM_GITHUB_USERNAME="/path/to/github-username"          # Path in SSM
 export SSM_GITHUB_ACCESS_TOKEN="/path/to/github-access-token"  # Path in SSM
+export KMS_SSM_KEYID="kms-key-id-used-by-ssm"
 ```
 
 4.  Export optional environment variables
