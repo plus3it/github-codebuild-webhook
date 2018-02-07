@@ -43,6 +43,14 @@ buildUsers = buildUsers != "" ? buildUsers.split(",") : [];
 var buildComment = getObjectDefault(process.env, "GITHUB_BUILD_COMMENT", "");
 buildComment = buildComment != "" ? buildComment : "go codebuild go";
 
+// Controls whether the sourceVersion parameter is set to the pull request and passed to the CodeBuild job. Set to true if the repo for the CodeBuild project itself is different from the repo where the webhook will be created
+var cbExternalBuildspec = getObjectDefault(process.env, "CB_EXTERNAL_BUILDSPEC", "");
+cbExternalBuildspec = (cbExternalBuildspec == "true") ? true : false;
+
+// names of variables to use to pass repo and ref (pr#) to CodeBuild [optional]
+var cbGitRepoEnv = getObjectDefault(process.env, "CB_GIT_REPO_ENV", "");
+var cbGitRefEnv = getObjectDefault(process.env, "CB_GIT_REF_ENV", "");
+
 // this function will be triggered by the github webhook
 module.exports.start_build = (event, context, callback) => {
 
@@ -57,7 +65,10 @@ module.exports.start_build = (event, context, callback) => {
     buildUsers: buildUsers,
     buildComment: buildComment,
     pullActions: PULL_ACTIONS,
-    commentActions: COMMENT_ACTIONS
+    commentActions: COMMENT_ACTIONS,
+    cbExternalBuildspec: cbExternalBuildspec,
+    cbGitRepoEnv: cbGitRepoEnv,
+    cbGitRefEnv: cbGitRefEnv
   };
 
   getPullRequest(buildOptions, function (err, pullRequest) {
@@ -67,16 +78,42 @@ module.exports.start_build = (event, context, callback) => {
     } else if (pullRequest.state != "open") {
       callback("Pull request is not open");
     } else {
-      console.log("Cleared tests, this is a buildable event:", event)
+      console.log("Cleared tests, this is a buildable event:", event);
       response.pull_request = pullRequest;
       var head = pullRequest.head;
       var base = pullRequest.base;
       var repo = base.repo;
 
       var params = {
-        projectName: process.env.BUILD_PROJECT,
-        sourceVersion: 'pr/' + pullRequest.number
+        projectName: process.env.CB_BUILD_PROJECT
       };
+
+      if (!buildOptions.cbExternalBuildspec) {
+        params.sourceVersion = 'pr/' + pullRequest.number;
+        console.log("CodeBuild is using the source version (" + params.sourceVersion + ") (Use CB_EXTERNAL_BUILDSPEC=true parameter to change.)");
+      } else {
+        if (buildOptions.cbGitRepoEnv ) {
+          params.environmentVariablesOverride = [
+            {
+              name: buildOptions.cbGitRepoEnv,
+              type: "PLAINTEXT",
+              value: pullRequest.base.repo.clone_url
+            },
+          ]
+          if (buildOptions.cbGitRefEnv) {
+            params.environmentVariablesOverride = [
+              {
+                name: buildOptions.cbGitRefEnv,
+                type: "PLAINTEXT",
+                value: pullRequest.number + ""
+              },
+            ]
+          }
+        }
+        console.log("Not using the source version! Will likely use most-recently commited buildspec.yml instead. (Use CB_EXTERNAL_BUILDSPEC=true parameter to change.)");
+      }
+      
+      console.log("Params for the CodeBuild request are: ", params);
 
       var status = {
         owner: repo.owner.login,
