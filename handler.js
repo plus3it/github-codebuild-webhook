@@ -90,7 +90,7 @@ module.exports.start_build = (event, context, callback) => {
 
       if (!buildOptions.cbExternalBuildspec) {
         params.sourceVersion = 'pr/' + pullRequest.number;
-        console.log("CodeBuild is using the source version (" + params.sourceVersion + ") (Use CB_EXTERNAL_BUILDSPEC=true parameter to change.)");
+        console.log("CodeBuild will use the source version (" + params.sourceVersion + ") when starting the CodeBuild job. (Set CB_EXTERNAL_BUILDSPEC=true to change.)");
       } else {
         if (buildOptions.cbGitRepoEnv ) {
           params.environmentVariablesOverride = [
@@ -110,7 +110,7 @@ module.exports.start_build = (event, context, callback) => {
             ]
           }
         }
-        console.log("Not using the source version! Will likely use most-recently commited buildspec.yml instead. (Use CB_EXTERNAL_BUILDSPEC=true parameter to change.)");
+        console.log("Using an external buildspec. Will not pass sourceVersion when starting the CodeBuild job. Set CB_EXTERNAL_BUILDSPEC=false to change.");
       }
       
       console.log("Params for the CodeBuild request are: ", params);
