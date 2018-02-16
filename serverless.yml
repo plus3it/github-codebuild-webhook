@@ -1,4 +1,4 @@
-service: ${env:BUILD_PROJECT}-github-webhook
+service: ${env:CB_BUILD_PROJECT}-github-webhook
 
 plugins:
   - serverless-step-functions
@@ -9,14 +9,17 @@ plugins:
 custom:
   stage: dev
   github-webhook:
-    githubStatusContext: codebuild/${env:BUILD_PROJECT}/pr
+    githubStatusContext: codebuild/${env:CB_BUILD_PROJECT}/pr
     githubBuildEvents: pr_state
     githubBuildUsers: ""
     githubBuildComment: go codebuild go
+    cbExternalBuildspec: "false"
+    cbGitRepoEnv: ""
+    cbGitRefEnv: ""
   parameters:
-    CodebuildProject:
+    CbBuildProject:
       Type: String
-      Default: ${env:BUILD_PROJECT}
+      Default: ${env:CB_BUILD_PROJECT}
       Description: Name of the build project that should be triggered
     GithubRepository:
       Type: String
@@ -38,6 +41,18 @@ custom:
       Type: String
       Default: ${env:GITHUB_BUILD_COMMENT, self:custom.github-webhook.githubBuildComment}
       Description: For pull request comments, the comment that will initiate a build
+    CbExternalBuildspec:
+      Type: String
+      Default: ${env:CB_EXTERNAL_BUILDSPEC, self:custom.github-webhook.cbExternalBuildspec}
+      Description: Controls whether the sourceVersion parameter is set to the pull request and passed to the CodeBuild job. Set to true if the repo for the CodeBuild project itself is different from the repo where the webhook will be created.
+    CbGitRepoEnv:
+      Type: String
+      Default: ${env:CB_GIT_REPO_ENV, self:custom.github-webhook.cbGitRepoEnv}
+      Description: (Optional) Name of ENV variable that your CodeBuild project uses to know which repo to clone. For use with CB_EXTERNAL_BUILDSPEC.
+    CbGitRefEnv:
+      Type: String
+      Default: ${env:CB_GIT_REF_ENV, self:custom.github-webhook.cbGitRefEnv}
+      Description: (Optional) Name of ENV variable that your CodeBuild project uses to know which git ref to checkout. For use with CB_EXTERNAL_BUILDSPEC.
     SsmGithubUsername:
       Type: String
       Default: ${env:SSM_GITHUB_USERNAME}
@@ -59,7 +74,7 @@ provider:
     - Effect: "Allow"
       Action:
         - codebuild:*
-      Resource: "arn:aws:codebuild:#{AWS::Region}:#{AWS::AccountId}:project/${env:BUILD_PROJECT}"
+      Resource: "arn:aws:codebuild:#{AWS::Region}:#{AWS::AccountId}:project/${env:CB_BUILD_PROJECT}"
     - Effect: "Allow"
       Action:
         - ssm:GetParameter
@@ -74,8 +89,8 @@ provider:
       Resource: "arn:aws:kms:#{AWS::Region}:#{AWS::AccountId}:key/${env:KMS_SSM_KEYID}"
 
   environment:
-    BUILD_PROJECT:
-      Ref: CodebuildProject
+    CB_BUILD_PROJECT:
+      Ref: CbBuildProject
     GITHUB_REPOSITORY:
       Ref: GithubRepository
     GITHUB_STATUS_CONTEXT:
@@ -86,6 +101,12 @@ provider:
       Ref: GithubBuildUsers
     GITHUB_BUILD_COMMENT:
       Ref: GithubBuildComment
+    CB_EXTERNAL_BUILDSPEC:
+      Ref: CbExternalBuildspec
+    CB_GIT_REPO_ENV:
+      Ref: CbGitRepoEnv
+    CB_GIT_REF_ENV:
+      Ref: CbGitRefEnv
     SSM_GITHUB_USERNAME:
       Ref: SsmGithubUsername
     SSM_GITHUB_ACCESS_TOKEN:

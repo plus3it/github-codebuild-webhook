@@ -32,7 +32,7 @@ To deploy this service with Serverless:
 3.  Export required environment variables
 
 ```shell
-export BUILD_PROJECT="your_codebuild_application_name"
+export CB_BUILD_PROJECT="your_codebuild_application_name"
 export GITHUB_REPOSITORY="https://github.com/owner/repository"
 export SSM_GITHUB_USERNAME="/path/to/github-username"          # Path in SSM
 export SSM_GITHUB_ACCESS_TOKEN="/path/to/github-access-token"  # Path in SSM
@@ -46,6 +46,9 @@ export GITHUB_STATUS_CONTEXT="codebuild/pr"  # Tag associated with the status ch
 export GITHUB_BUILD_EVENTS="pr_state"  # Comma-separated string of build events, supports "pr_state" and "pr_comment"
 export GITHUB_BUILD_USERS=""  # Comma-separated string of GitHub users authorized to build from PR comments
 export GITHUB_BUILD_COMMENT="go codebuild go"  # Case-insensitive string that will start a build from a PR comment
+export CB_EXTERNAL_BUILDSPEC=false # Set to true if repo for the CodeBuild project is different from repo where webhook is created
+export CB_GIT_REPO_ENV=REPO_TO_BUILD # Name of ENV variable CodeBuild project uses to know which repo to clone. Use with CB_EXTERNAL_BUILDSPEC.
+export CB_GIT_REF_ENV=REF_TO_BUILD # Name of ENV variable CodeBuild project uses to know which git ref to checkout. Use with CB_EXTERNAL_BUILDSPEC.
 ```
 
 5.  Run `serverless deploy`
