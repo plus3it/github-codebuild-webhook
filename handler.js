@@ -101,13 +101,11 @@ module.exports.start_build = (event, context, callback) => {
             },
           ]
           if (buildOptions.cbGitRefEnv) {
-            params.environmentVariablesOverride = [
-              {
+            params.environmentVariablesOverride.push({
                 name: buildOptions.cbGitRefEnv,
                 type: "PLAINTEXT",
-                value: pullRequest.number + ""
-              },
-            ]
+                value: pullRequest.number.toString()
+            });
           }
         }
         console.log("Using an external buildspec. Will not pass sourceVersion when starting the CodeBuild job. Set CB_EXTERNAL_BUILDSPEC=false to change.");
