@@ -4,8 +4,8 @@ var AWS = require('aws-sdk');
 var codebuild = new AWS.CodeBuild();
 var ssm = new AWS.SSM();
 
-var GitHubApi = require("github");
-var github = new GitHubApi();
+var OctoKitApi = require('@octokit/rest');
+var octokit = new OctoKitApi();
 
 var ssmParams = {
   username: {
@@ -44,14 +44,14 @@ module.exports.resource = (event, context, callback) => {
       }
     };
 
-    setGithubAuth(github, ssm, ssmParams, function (err) {
+    setGithubAuth(octokit, ssm, ssmParams, function (err) {
       if (err) {
         console.log(err);
         sendResponse(event, context, "FAILED", {});
         callback(err);
       } else {
         if(event.RequestType == "Create") {
-          github.repos.createHook(data).then(function(data){
+          octokit.repos.createHook(data).then(function(data){
             sendResponse(event, context, "SUCCESS", {});
           }).catch(function(err){
             console.log(err);
@@ -59,7 +59,7 @@ module.exports.resource = (event, context, callback) => {
             callback(err);
           });
         } else {
-          github.repos.editHook(data).then(function(data){
+          octokit.repos.editHook(data).then(function(data){
             sendResponse(event, context, "SUCCESS", {});
           }).catch(function(err){
             console.log(err);
@@ -125,9 +125,9 @@ function sendResponse(event, context, responseStatus, responseData) {
     request.end();
 }
 
-function setGithubAuth(github, ssm, params, callback) {
+function setGithubAuth(octokit, ssm, params, callback) {
 
-  if (github.hasOwnProperty("auth")) {
+  if (octokit.hasOwnProperty("auth")) {
     console.log("Github auth object already set");
     callback();
   } else {
@@ -146,7 +146,7 @@ function setGithubAuth(github, ssm, params, callback) {
           else {
             cred.password = data.Parameter.Value;
             try {
-              github.authenticate(cred);
+              octokit.authenticate(cred);
             } catch (err) {
               callback(err);
             }
