@@ -4,8 +4,8 @@ var AWS = require('aws-sdk');
 var codebuild = new AWS.CodeBuild();
 var ssm = new AWS.SSM();
 
-var GitHubApi = require("github");
-var github = new GitHubApi();
+var OctoKitApi = require('@octokit/rest');
+var octokit = new OctoKitApi();
 var PULL_ACTIONS = [
     "opened",
     "reopened",
@@ -110,7 +110,7 @@ module.exports.start_build = (event, context, callback) => {
         }
         console.log("Using an external buildspec. Will not pass sourceVersion when starting the CodeBuild job. Set CB_EXTERNAL_BUILDSPEC=false to change.");
       }
-      
+
       console.log("Params for the CodeBuild request are: ", params);
 
       var status = {
@@ -122,13 +122,13 @@ module.exports.start_build = (event, context, callback) => {
         description: 'Setting up the build...'
       };
 
-      setGithubAuth(github, ssm, ssmParams, function (err) {
+      setGithubAuth(octokit, ssm, ssmParams, function (err) {
         if (err) {
           console.log(err);
           callback(err);
         } else {
           // check that we can set a status before starting the build
-          github.repos.createStatus(status).then(function(data) {
+          octokit.repos.createStatus(status).then(function(data) {
             console.log("Set setup status:", data)
             // start the codebuild  project
             codebuild.startBuild(params, function(err, data) {
@@ -143,7 +143,7 @@ module.exports.start_build = (event, context, callback) => {
                 // all is well, mark the commit as being 'in progress'
                 status.description = 'Build is running...'
                 status.target_url = 'https://' + region + '.console.aws.amazon.com/codebuild/home?region=' + region + '#/builds/' + data.build.id + '/view/new'
-                github.repos.createStatus(status).then(function(data){
+                octokit.repos.createStatus(status).then(function(data){
                   // success
                   console.log("Set running status:", data)
                   callback(null, response);
@@ -208,12 +208,12 @@ module.exports.build_done = (event, context, callback) => {
   }
   console.log('Github state will be', state);
 
-  setGithubAuth(github, ssm, ssmParams, function (err) {
+  setGithubAuth(octokit, ssm, ssmParams, function (err) {
     if (err) {
       console.log(err);
       callback(err);
     } else {
-      github.repos.createStatus({
+      octokit.repos.createStatus({
         owner: repo.owner.login,
         repo: repo.name,
         sha: head.sha,
@@ -229,9 +229,9 @@ module.exports.build_done = (event, context, callback) => {
   });
 }
 
-function setGithubAuth(github, ssm, params, callback) {
+function setGithubAuth(octokit, ssm, params, callback) {
 
-  if (github.hasOwnProperty("auth")) {
+  if (octokit.hasOwnProperty("auth")) {
     console.log("Github auth object already set");
     callback();
   } else {
@@ -250,7 +250,7 @@ function setGithubAuth(github, ssm, params, callback) {
           else {
             cred.password = data.Parameter.Value;
             try {
-              github.authenticate(cred);
+              octokit.authenticate(cred);
             } catch (err) {
               callback(err);
             }
@@ -313,7 +313,7 @@ function isIssueCommentEvent(options) {
 }
 
 function getPullFromComment(issue, callback) {
-    setGithubAuth(github, ssm, ssmParams, function (err) {
+    setGithubAuth(octokit, ssm, ssmParams, function (err) {
     if (err) {
       console.log(err);
       callback(err);
@@ -323,7 +323,7 @@ function getPullFromComment(issue, callback) {
       var owner = pullRequestUrl[4];
       var repo = pullRequestUrl[5];
       var number = pullRequestUrl[7];
-      github.pullRequests.get({
+      octokit.pullRequests.get({
         owner: owner,
         repo: repo,
         number: number
