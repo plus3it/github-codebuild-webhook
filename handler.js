@@ -39,9 +39,9 @@ var buildEvents = getObjectDefault(process.env, "GITHUB_BUILD_EVENTS", "pr_state
 var buildUsers = getObjectDefault(process.env, "GITHUB_BUILD_USERS", "");
 buildUsers = buildUsers != "" ? buildUsers.split(",") : [];
 
-// get the build comment
-var buildComment = getObjectDefault(process.env, "GITHUB_BUILD_COMMENT", "");
-buildComment = buildComment != "" ? buildComment : "go codebuild go";
+//get the build comments
+var buildComments = getObjectDefault(process.env, "GITHUB_BUILD_COMMENTS", "");
+buildComments = buildComments != "" ? buildComments : "go codebuild go, go codebuild ci go";
 
 // Controls whether the sourceVersion parameter is set to the pull request and passed to the CodeBuild job. Set to true if the repo for the CodeBuild project itself is different from the repo where the webhook will be created
 var cbExternalBuildspec = getObjectDefault(process.env, "CB_EXTERNAL_BUILDSPEC", "");
@@ -50,6 +50,16 @@ cbExternalBuildspec = (cbExternalBuildspec == "true") ? true : false;
 // names of variables to use to pass repo and ref (pr#) to CodeBuild [optional]
 var cbGitRepoEnv = getObjectDefault(process.env, "CB_GIT_REPO_ENV", "");
 var cbGitRefEnv = getObjectDefault(process.env, "CB_GIT_REF_ENV", "");
+
+// Additional CI Environment for just the CI job
+var ciExtraEnvName = getObjectDefault(process.env, "CI_EXTRA_ENV_NAME", "");
+var ciExtraEnvValue = getObjectDefault(process.env, "CI_EXTRA_ENV_VALUE", "");
+var ciJobEnv = {
+  name: ciExtraEnvName,
+  value: ciExtraEnvValue,
+  type: "PLAINTEXT"
+};
+var ciJobBuildComment = "go codebuild ci go";
 
 // this function will be triggered by the github webhook
 module.exports.start_build = (event, context, callback) => {
@@ -63,7 +73,7 @@ module.exports.start_build = (event, context, callback) => {
     event: event,
     buildEvents: buildEvents,
     buildUsers: buildUsers,
-    buildComment: buildComment,
+    buildComments: buildComments,
     pullActions: PULL_ACTIONS,
     commentActions: COMMENT_ACTIONS,
     cbExternalBuildspec: cbExternalBuildspec,
@@ -109,6 +119,14 @@ module.exports.start_build = (event, context, callback) => {
           }
         }
         console.log("Using an external buildspec. Will not pass sourceVersion when starting the CodeBuild job. Set CB_EXTERNAL_BUILDSPEC=false to change.");
+      }
+
+      if(isCIBuild(buildOptions)){
+        if(params.environmentVariablesOverride){
+          params.environmentVariablesOverride.push(ciJobEnv);
+        }else{
+          params.environmentVariablesOverride = [ciJobEnv];
+        }
       }
 
       console.log("Params for the CodeBuild request are: ", params);
@@ -302,14 +320,31 @@ function isIssueCommentEvent(options) {
         'issue' in options.event &&
         'pull_request' in options.event.issue &&
         options.commentActions.indexOf(options.event.action) >= 0 &&
-        options.buildEvents.indexOf('pr_comment') >= 0 &&
-        options.buildComment.toLowerCase() === options.event.comment.body.toLowerCase()
+        options.buildEvents.indexOf('pr_comment') >= 0 && checkCommentForBuild(options)
     );
+
     if (options.buildUsers.length > 0) {
         isBuildable = isBuildable && options.buildUsers.indexOf(options.event.comment.user.login) >= 0
     }
     console.log("Test for buildable issue_comment event:", isBuildable);
     return isBuildable;
+}
+
+function checkCommentForBuild(options){
+    var comments = options.buildComments.toLowerCase().split(',');
+    var isBuildable = false;
+    if(comments.length > 0 && options.event.comment){
+        isBuildable = comments.find(function(c){ return c.toLowerCase().trim() === options.event.comment.body.toLowerCase()}) ? true : false;
+    }
+    return isBuildable;
+}
+
+function isCIBuild(options){
+    var isCI = (
+      'comment' in options.event &&
+      options.event.comment.body.toLowerCase() === ciJobBuildComment
+    )
+    return isCI;
 }
 
 function getPullFromComment(issue, callback) {

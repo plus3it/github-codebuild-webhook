@@ -12,10 +12,12 @@ custom:
     githubStatusContext: codebuild/${env:CB_BUILD_PROJECT}/pr
     githubBuildEvents: pr_state
     githubBuildUsers: ""
-    githubBuildComment: go codebuild go
+    githubBuildComments: go codebuild go, go codebuild ci go
     cbExternalBuildspec: "false"
     cbGitRepoEnv: ""
     cbGitRefEnv: ""
+    ciExtraEnvName: ""
+    ciExtraEnvValue: ""
   parameters:
     CbBuildProject:
       Type: String
@@ -37,10 +39,10 @@ custom:
       Type: String
       Default: ${env:GITHUB_BUILD_USERS, self:custom.github-webhook.githubBuildUsers}
       Description: For pull request comments, a comma-separated string of users authorized to initiate a build
-    GithubBuildComment:
+    GithubBuildComments:
       Type: String
-      Default: ${env:GITHUB_BUILD_COMMENT, self:custom.github-webhook.githubBuildComment}
-      Description: For pull request comments, the comment that will initiate a build
+      Default: ${env:GITHUB_BUILD_COMMENTS, self:custom.github-webhook.githubBuildComments}
+      Description: For pull request comments, a comma-seperated string of comments that will initiate a build
     CbExternalBuildspec:
       Type: String
       Default: ${env:CB_EXTERNAL_BUILDSPEC, self:custom.github-webhook.cbExternalBuildspec}
@@ -61,7 +63,14 @@ custom:
       Type: String
       Default: ${env:SSM_GITHUB_ACCESS_TOKEN}
       Description: Encrypted SSM parameter name containing the generated Github access token
-
+    CiExtraEnvName:
+      Type: String
+      Default: ${env:CI_EXTRA_ENV_NAME, self:custom.github-webhook.ciExtraEnvName}
+      Description: Additional env to be added to the build job ENV when comment is 'go codebuild ci go'
+    CiExtraEnvValue:
+      Type: String
+      Default: ${env:CI_EXTRA_ENV_VALUE, self:custom.github-webhook.ciExtraEnvValue}
+      Description: Additional env value to be added to the build job ENV when comment is 'go codebuild ci go'
 provider:
   name: aws
   runtime: nodejs8.10
@@ -99,8 +108,8 @@ provider:
       Ref: GithubBuildEvents
     GITHUB_BUILD_USERS:
       Ref: GithubBuildUsers
-    GITHUB_BUILD_COMMENT:
-      Ref: GithubBuildComment
+    GITHUB_BUILD_COMMENTS:
+      Ref: GithubBuildComments
     CB_EXTERNAL_BUILDSPEC:
       Ref: CbExternalBuildspec
     CB_GIT_REPO_ENV:
@@ -111,7 +120,11 @@ provider:
       Ref: SsmGithubUsername
     SSM_GITHUB_ACCESS_TOKEN:
       Ref: SsmGithubAccessToken
-
+    CI_EXTRA_ENV_NAME:
+      Ref: CiExtraEnvName
+    CI_EXTRA_ENV_VALUE:
+      Ref: CiExtraEnvValue
+      
 functions:
   start-build:
     handler: handler.start_build

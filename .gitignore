@@ -8,3 +8,5 @@ jspm_packages
 # private directory
 .private
 
+# package lock
+package-lock.json 
