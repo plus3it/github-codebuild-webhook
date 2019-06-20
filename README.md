@@ -49,6 +49,7 @@ export GITHUB_BUILD_COMMENT="go codebuild go"  # Case-insensitive string that wi
 export CB_EXTERNAL_BUILDSPEC=false # Set to true if repo for the CodeBuild project is different from repo where webhook is created
 export CB_GIT_REPO_ENV=REPO_TO_BUILD # Name of ENV variable CodeBuild project uses to know which repo to clone. Use with CB_EXTERNAL_BUILDSPEC.
 export CB_GIT_REF_ENV=REF_TO_BUILD # Name of ENV variable CodeBuild project uses to know which git ref to checkout. Use with CB_EXTERNAL_BUILDSPEC.
+export CB_ENV # key=value pairs of any extra Environment Variables to be included in the CodeBuild jobs. Example: CB_ENV="FOO=bar;ABC=123"
 ```
 
 5.  Run `serverless deploy`

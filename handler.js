@@ -4,6 +4,8 @@ var AWS = require('aws-sdk');
 var codebuild = new AWS.CodeBuild();
 var ssm = new AWS.SSM();
 
+const querystring = require('querystring');
+
 var OctoKitApi = require('@octokit/rest');
 var octokit = new OctoKitApi();
 var PULL_ACTIONS = [
@@ -51,6 +53,9 @@ cbExternalBuildspec = (cbExternalBuildspec == "true") ? true : false;
 var cbGitRepoEnv = getObjectDefault(process.env, "CB_GIT_REPO_ENV", "");
 var cbGitRefEnv = getObjectDefault(process.env, "CB_GIT_REF_ENV", "");
 
+// get key:value pairs of the extra environment variable to pass on to CI build jobs
+var cbEnv = getObjectDefault(process.env, "CB_ENV", "");
+
 // this function will be triggered by the github webhook
 module.exports.start_build = (event, context, callback) => {
 
@@ -85,7 +90,8 @@ module.exports.start_build = (event, context, callback) => {
       var repo = base.repo;
 
       var params = {
-        projectName: process.env.CB_BUILD_PROJECT
+        projectName: process.env.CB_BUILD_PROJECT,
+        environmentVariablesOverride: []
       };
 
       if (!buildOptions.cbExternalBuildspec) {
@@ -93,13 +99,11 @@ module.exports.start_build = (event, context, callback) => {
         console.log("CodeBuild will use the source version (" + params.sourceVersion + ") when starting the CodeBuild job. (Set CB_EXTERNAL_BUILDSPEC=true to change.)");
       } else {
         if (buildOptions.cbGitRepoEnv ) {
-          params.environmentVariablesOverride = [
-            {
+          params.environmentVariablesOverride.push({
               name: buildOptions.cbGitRepoEnv,
               type: "PLAINTEXT",
               value: pullRequest.base.repo.clone_url
-            },
-          ]
+          });
           if (buildOptions.cbGitRefEnv) {
             params.environmentVariablesOverride.push({
                 name: buildOptions.cbGitRefEnv,
@@ -109,6 +113,18 @@ module.exports.start_build = (event, context, callback) => {
           }
         }
         console.log("Using an external buildspec. Will not pass sourceVersion when starting the CodeBuild job. Set CB_EXTERNAL_BUILDSPEC=false to change.");
+      }
+
+      //Adding extra env variables to the CI build jobs
+      if(cbEnv){
+        var extraEnv = querystring.parse(cbEnv, ';');
+        for(var key in extraEnv){
+            params.environmentVariablesOverride.push({
+              name: key,
+              type: "PLAINTEXT",
+              value: extraEnv[key].toString()
+            });
+        }
       }
 
       console.log("Params for the CodeBuild request are: ", params);

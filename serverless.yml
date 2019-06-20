@@ -16,6 +16,7 @@ custom:
     cbExternalBuildspec: "false"
     cbGitRepoEnv: ""
     cbGitRefEnv: ""
+    cbEnv: ""
   parameters:
     CbBuildProject:
       Type: String
@@ -53,6 +54,10 @@ custom:
       Type: String
       Default: ${env:CB_GIT_REF_ENV, self:custom.github-webhook.cbGitRefEnv}
       Description: (Optional) Name of ENV variable that your CodeBuild project uses to know which git ref to checkout. For use with CB_EXTERNAL_BUILDSPEC.
+    CbEnv:
+      Type: String
+      Default: ${env:CB_ENV, self:custom.github-webhook.cbEnv}
+      Description: (Optional) Extra ENV variables will be pass to the CodeBuild job, supporting (CB_ENV="FOO=bar;ABC=123") .
     SsmGithubUsername:
       Type: String
       Default: ${env:SSM_GITHUB_USERNAME}
@@ -107,6 +112,8 @@ provider:
       Ref: CbGitRepoEnv
     CB_GIT_REF_ENV:
       Ref: CbGitRefEnv
+    CB_ENV:
+      Ref: CbEnv
     SSM_GITHUB_USERNAME:
       Ref: SsmGithubUsername
     SSM_GITHUB_ACCESS_TOKEN:
