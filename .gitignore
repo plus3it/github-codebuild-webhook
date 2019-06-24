@@ -8,3 +8,7 @@ jspm_packages
 # private directory
 .private
 
+# lock file for packages
+package-lock.json
+
+.DS_Store
