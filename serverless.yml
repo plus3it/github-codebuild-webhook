@@ -69,7 +69,7 @@ custom:
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   stage: ${opt:stage, self:custom.stage}
   versionFunctions: false
   memorySize: 128
