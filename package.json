@@ -2,7 +2,7 @@
   "name": "github-codebuild-webhook",
   "version": "0.0.1",
   "dependencies": {
-    "@octokit/rest": "^16.28.7",
+    "@octokit/rest": "^17.0.0",
     "aws-sdk": "^2.514.0"
   },
   "devDependencies": {
