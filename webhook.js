@@ -1,7 +1,6 @@
 'use strict';
 
 var AWS = require('aws-sdk');
-AWS.config.update({region:process.env.AWS_DEFAULT_REGION});
 var codebuild = new AWS.CodeBuild();
 var ssm = new AWS.SSM();
 
@@ -50,7 +49,7 @@ module.exports.resource = (event, context, callback) => {
         sendResponse(event, context, "FAILED", {});
         callback(err);
       } else {
-				console.log("ATTEMPTING TO CREATE HOOK")
+        console.log("ATTEMPTING TO CREATE HOOK")
         if(event.RequestType == "Create") {
           octokit.repos.createHook(data).then(function(data){
             sendResponse(event, context, "SUCCESS", {});
@@ -124,24 +123,24 @@ function sendResponse(event, context, responseStatus, responseData) {
 }
 
 function setGithubAuth(ssm, params, callback) {
-	console.log("Setting up the Github auth object");
-	var octokit;
+  console.log("Setting up the Github auth object");
+  var octokit;
 
-	// attempt to get credentials
-	ssm.getParameter(params.accessToken, function (err, data) {
-		if(err) {
-			callback(err);
-		}
-		else {
-			try {
-				octokit = new Octokit({
-					auth: data.Parameter.Value
-				});
-				callback(null, octokit);
-			}
-			catch (err) {
-				callback(err);
-			}
-		}
-	})
+  // attempt to get credentials
+  ssm.getParameter(params.accessToken, function (err, data) {
+    if(err) {
+      callback(err);
+    }
+    else {
+      try {
+        octokit = new Octokit({
+          auth: data.Parameter.Value
+        });
+        callback(null, octokit);
+      }
+      catch (err) {
+        callback(err);
+      }
+    }
+  })
 }

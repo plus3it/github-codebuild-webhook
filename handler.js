@@ -349,7 +349,7 @@ function getPullFromComment(issue, callback) {
         callback(err);
       });
     }
-   });
+  });
 }
 
 function getObjectDefault(obj, key, defaultValue) {
