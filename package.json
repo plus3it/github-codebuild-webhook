@@ -2,15 +2,15 @@
   "name": "github-codebuild-webhook",
   "version": "0.0.1",
   "dependencies": {
-    "@octokit/rest": "^16.28.7",
-    "aws-sdk": "^2.514.0"
+    "@octokit/rest": "^17.2.1",
+    "aws-sdk": "^2.656.0"
   },
   "devDependencies": {
-    "serverless": "^1.50.0",
+    "serverless": "^1.67.3",
     "serverless-parameters": "^0.1.0",
     "serverless-portable-templates": "file:plugins/serverless-portable-templates",
     "serverless-pseudo-parameters": "^2.4.0",
-    "serverless-step-functions": "^2.5.0"
+    "serverless-step-functions": "^2.18.0"
   },
   "license": "MIT",
   "repository": {

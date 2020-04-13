@@ -1,11 +1,11 @@
 'use strict';
 
 var AWS = require('aws-sdk');
+AWS.config.update({region:process.env.AWS_DEFAULT_REGION});
 var codebuild = new AWS.CodeBuild();
 var ssm = new AWS.SSM();
 
-var OctoKitApi = require('@octokit/rest');
-var octokit = new OctoKitApi();
+const { Octokit } = require("@octokit/rest");
 
 var ssmParams = {
   username: {
@@ -44,12 +44,13 @@ module.exports.resource = (event, context, callback) => {
       }
     };
 
-    setGithubAuth(octokit, ssm, ssmParams, function (err) {
+    setGithubAuth(ssm, ssmParams, function (err, octokit) {
       if (err) {
         console.log(err);
         sendResponse(event, context, "FAILED", {});
         callback(err);
       } else {
+				console.log("ATTEMPTING TO CREATE HOOK")
         if(event.RequestType == "Create") {
           octokit.repos.createHook(data).then(function(data){
             sendResponse(event, context, "SUCCESS", {});
@@ -70,9 +71,6 @@ module.exports.resource = (event, context, callback) => {
       }
     });
   }
-  // var responseStatus = "FAILED";
-  // var responseData = {};
-  // sendResponse(event, context, responseStatus, responseData);
 }
 
 // Send response to the pre-signed S3 URL
@@ -125,35 +123,25 @@ function sendResponse(event, context, responseStatus, responseData) {
     request.end();
 }
 
-function setGithubAuth(octokit, ssm, params, callback) {
+function setGithubAuth(ssm, params, callback) {
+	console.log("Setting up the Github auth object");
+	var octokit;
 
-  if (octokit.hasOwnProperty("auth")) {
-    console.log("Github auth object already set");
-    callback();
-  } else {
-    console.log("Setting up the Github auth object");
-
-    var cred = {
-      type: "basic"
-    };
-
-    ssm.getParameter(params.username, function (err, data) {
-      if (err) callback(err);
-      else {
-        cred.username = data.Parameter.Value;
-        ssm.getParameter(params.accessToken, function (err, data) {
-          if (err) callback(err);
-          else {
-            cred.password = data.Parameter.Value;
-            try {
-              octokit.authenticate(cred);
-            } catch (err) {
-              callback(err);
-            }
-            callback();
-          }
-        });
-      }
-    });
-  }
+	// attempt to get credentials
+	ssm.getParameter(params.accessToken, function (err, data) {
+		if(err) {
+			callback(err);
+		}
+		else {
+			try {
+				octokit = new Octokit({
+					auth: data.Parameter.Value
+				});
+				callback(null, octokit);
+			}
+			catch (err) {
+				callback(err);
+			}
+		}
+	})
 }
