@@ -70,6 +70,18 @@ module.exports.start_build = (event, context, callback) => {
     cbGitRefEnv: cbGitRefEnv
   }
 
+  /*
+    getPullRequest() tests the build event and returns pr data if the event is
+    buildable.
+    options = {
+      event: {},
+      buildEvents: [],
+      buildUsers: [],
+      buildComment: "",
+      pullActions: [],
+      commentActions: [],
+    }
+  */
   getPullRequest(buildOptions, function (err, pullRequest) {
     if (err) {
       console.log(err)
@@ -185,7 +197,6 @@ module.exports.check_build_status = (event, context, callback) => {
   codebuild.batchGetBuilds(params, function (err, data) {
     if (err) {
       console.log(err, err.stack)
-      context.fail(err)
       callback(err)
     } else {
       response.build = data.builds[0]
@@ -238,6 +249,7 @@ module.exports.build_done = (event, context, callback) => {
         description: 'Build ' + buildStatus + '...'
       }).catch(function (err) {
         console.log(err)
+        callback(err)
       })
     }
   })
@@ -252,14 +264,10 @@ function setGithubAuth (ssm, params, callback) {
     if (err) {
       callback(err)
     } else {
-      try {
-        octokit = new Octokit({
-          auth: data.Parameter.Value
-        })
-        callback(null, octokit)
-      } catch (err) {
-        callback(err)
-      }
+      octokit = new Octokit({
+        auth: data.Parameter.Value
+      })
+      callback(null, octokit)
     }
   })
 }

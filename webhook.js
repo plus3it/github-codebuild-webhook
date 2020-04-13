@@ -121,14 +121,10 @@ function setGithubAuth (ssm, params, callback) {
     if (err) {
       callback(err)
     } else {
-      try {
-        octokit = new Octokit({
-          auth: data.Parameter.Value
-        })
-        callback(null, octokit)
-      } catch (err) {
-        callback(err)
-      }
+      octokit = new Octokit({
+        auth: data.Parameter.Value
+      })
+      callback(null, octokit)
     }
   })
 }
