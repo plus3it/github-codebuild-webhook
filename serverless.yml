@@ -58,10 +58,6 @@ custom:
       Type: String
       Default: ${env:CB_ENV, self:custom.github-webhook.cbEnv}
       Description: (Optional) Extra ENV variables will be pass to the CodeBuild job, supporting (CB_ENV="FOO=bar;ABC=123") .
-    SsmGithubUsername:
-      Type: String
-      Default: ${env:SSM_GITHUB_USERNAME}
-      Description: Encrypted SSM parameter name containing the Github username, this is the user which will be displayed
     SsmGithubAccessToken:
       Type: String
       Default: ${env:SSM_GITHUB_ACCESS_TOKEN}
@@ -84,9 +80,7 @@ provider:
       Action:
         - ssm:GetParameter
       Resource:
-        - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter${env:SSM_GITHUB_USERNAME}"
         - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter${env:SSM_GITHUB_ACCESS_TOKEN}"
-        - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/${env:SSM_GITHUB_USERNAME}"
         - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/${env:SSM_GITHUB_ACCESS_TOKEN}"
     - Effect: "Allow"
       Action:
@@ -114,8 +108,6 @@ provider:
       Ref: CbGitRefEnv
     CB_ENV:
       Ref: CbEnv
-    SSM_GITHUB_USERNAME:
-      Ref: SsmGithubUsername
     SSM_GITHUB_ACCESS_TOKEN:
       Ref: SsmGithubAccessToken
 
