@@ -6,7 +6,7 @@
     "aws-sdk": "^2.656.0"
   },
   "devDependencies": {
-    "serverless": "^1.67.3",
+    "serverless": "^2.25.1",
     "serverless-parameters": "^0.1.0",
     "serverless-portable-templates": "file:plugins/serverless-portable-templates",
     "serverless-pseudo-parameters": "^2.4.0",
