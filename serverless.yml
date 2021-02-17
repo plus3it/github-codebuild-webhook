@@ -65,27 +65,29 @@ custom:
 
 provider:
   name: aws
-  runtime: nodejs10.x
+  runtime: nodejs14.x
   stage: ${opt:stage, self:custom.stage}
   versionFunctions: false
   memorySize: 128
 
   # you can add statements to the Lambda function's IAM Role here
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - codebuild:*
-      Resource: "arn:aws:codebuild:#{AWS::Region}:#{AWS::AccountId}:project/${env:CB_BUILD_PROJECT}"
-    - Effect: "Allow"
-      Action:
-        - ssm:GetParameter
-      Resource:
-        - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter${env:SSM_GITHUB_ACCESS_TOKEN}"
-        - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/${env:SSM_GITHUB_ACCESS_TOKEN}"
-    - Effect: "Allow"
-      Action:
-        - kms:Decrypt
-      Resource: "arn:aws:kms:#{AWS::Region}:#{AWS::AccountId}:key/${env:KMS_SSM_KEYID}"
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - codebuild:*
+          Resource: "arn:aws:codebuild:#{AWS::Region}:#{AWS::AccountId}:project/${env:CB_BUILD_PROJECT}"
+        - Effect: "Allow"
+          Action:
+            - ssm:GetParameter
+          Resource:
+            - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter${env:SSM_GITHUB_ACCESS_TOKEN}"
+            - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/${env:SSM_GITHUB_ACCESS_TOKEN}"
+        - Effect: "Allow"
+          Action:
+            - kms:Decrypt
+          Resource: "arn:aws:kms:#{AWS::Region}:#{AWS::AccountId}:key/${env:KMS_SSM_KEYID}"
 
   environment:
     CB_BUILD_PROJECT:
