@@ -34,6 +34,10 @@ custom:
       Type: String
       Default: ${env:GITHUB_BUILD_EVENTS, self:custom.github-webhook.githubBuildEvents}
       Description: Comma-separated string of Github events that should initiate a build, supports "pr_state" or "pr_comment"
+    GithubBuildAssociations:
+      Type: String
+      Default: ${env:GITHUB_BUILD_ASSOCIATIONS, self:custom.github-webhook.githubBuildAssociations}
+      Description: For pull request comments, a comma-separated string of author associations authorized to initiate a build, see https://docs.github.com/en/graphql/reference/enums#commentauthorassociation
     GithubBuildUsers:
       Type: String
       Default: ${env:GITHUB_BUILD_USERS, self:custom.github-webhook.githubBuildUsers}
@@ -98,6 +102,8 @@ provider:
       Ref: GithubStatusContext
     GITHUB_BUILD_EVENTS:
       Ref: GithubBuildEvents
+    GITHUB_BUILD_ASSOCIATIONS:
+      Ref: GithubBuildAssociations
     GITHUB_BUILD_USERS:
       Ref: GithubBuildUsers
     GITHUB_BUILD_COMMENT:
