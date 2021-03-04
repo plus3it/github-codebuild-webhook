@@ -32,6 +32,10 @@ var githubContext = process.env.GITHUB_STATUS_CONTEXT
 // get the desired buildable events, 'pr_state,pr_comment'
 var buildEvents = getObjectDefault(process.env, 'GITHUB_BUILD_EVENTS', 'pr_state').split(',')
 
+// get the authorized build associations
+var buildAssociations = getObjectDefault(process.env, 'GITHUB_BUILD_ASSOCIATIONS', '')
+buildAssociations = buildAssociations !== '' ? buildAssociations.split(',') : []
+
 // get the authorized build users
 var buildUsers = getObjectDefault(process.env, 'GITHUB_BUILD_USERS', '')
 buildUsers = buildUsers !== '' ? buildUsers.split(',') : []
@@ -61,6 +65,7 @@ module.exports.start_build = (event, context, callback) => {
   var buildOptions = {
     event: event,
     buildEvents: buildEvents,
+    buildAssociations: buildAssociations,
     buildUsers: buildUsers,
     buildComment: buildComment,
     pullActions: PULL_ACTIONS,
@@ -76,6 +81,7 @@ module.exports.start_build = (event, context, callback) => {
     options = {
       event: {},
       buildEvents: [],
+      buildAssociations: [],
       buildUsers: [],
       buildComment: "",
       pullActions: [],
@@ -308,10 +314,18 @@ function isIssueCommentEvent (options) {
     options.buildEvents.indexOf('pr_comment') >= 0 &&
     options.buildComment.toLowerCase() === options.event.comment.body.toLowerCase()
   )
+
+  var userAuthorized = false
   if (options.buildUsers.length > 0) {
-    isBuildable = isBuildable && options.buildUsers.indexOf(options.event.comment.user.login) >= 0
+    userAuthorized = options.buildUsers.indexOf(options.event.comment.user.login) >= 0
   }
 
+  var associationAuthorized = false
+  if (options.buildAssociations.length > 0) {
+    associationAuthorized = options.buildAssociations.indexOf(options.event.comment.author_association) >= 0
+  }
+
+  isBuildable = isBuildable && (userAuthorized || associationAuthorized)
   console.log('Test for buildable issue_comment event:', isBuildable)
   return isBuildable
 }
